@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  guacamole_db:
+    container_name: guacamole_db
+    hostname: guacamole_db
+    image: mariadb:10.11
+    restart: always
+    volumes:
+      - ./guacamole_db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    expose:
+      - 3306
+
+  guacd:
+    container_name: guacd
+    hostname: guacd
+    image: guacamole/guacd:latest
+    restart: always
+    environment:
+      - RECORDING_SEARCH_PATH=${RECORDING_SEARCH_PATH}
+    volumes:
+      - ./guacd_drive:/drive:rw
+      - ./guacd_record:${RECORDING_SEARCH_PATH}:rw
+    expose:
+      - 4822
+
+  guacamole:
+    container_name: guacamole
+    hostname: guacamole
+    restart: always
+    image: guacamole/guacamole:latest
+    depends_on:
+      - guacamole_db
+      - guacd
+    ports:
+      - 8080:8080
+    links:
+      - guacd
+    environment:
+      - GUACD_HOSTNAME=guacd
+      - MYSQL_HOSTNAME=guacamole_db
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - REMOTE_IP_VALVE_ENABLED=${REMOTE_IP_VALVE_ENABLED}
+      - RECORDING_SEARCH_PATH=${RECORDING_SEARCH_PATH}
+      - OPENID_AUTHORIZATION_ENDPOINT=${OPENID_AUTHORIZATION_ENDPOINT}
+      - OPENID_CLIENT_ID=${OPENID_CLIENT_ID}
+      - OPENID_ISSUER=${OPENID_ISSUER}
+      - OPENID_JWKS_ENDPOINT=${OPENID_JWKS_ENDPOINT}
+      - OPENID_REDIRECT_URI=${OPENID_REDIRECT_URI}
+      - OPENID_USERNAME_CLAIM_TYPE=${OPENID_USERNAME_CLAIM_TYPE}
+    volumes:
+      - ./guacd_record:${RECORDING_SEARCH_PATH}:ro
+      - ./extensions:/opt/guacamole/extensions
+      - ./certs/cacerts:/opt/java/openjdk/jre/lib/security/cacerts
